@@ -17,6 +17,7 @@ export async function POST(req: Request) {
     syncType?: string;
     since?: string | null;
     startedAt?: string | null;
+    pollSeconds?: number;
   };
   try {
     body = await req.json();
@@ -34,15 +35,16 @@ export async function POST(req: Request) {
 
   const since = body.since ? new Date(body.since) : null;
   const startedAt = body.startedAt ? new Date(body.startedAt) : new Date();
+  const pollSeconds = typeof body.pollSeconds === "number" ? Math.round(body.pollSeconds) : null;
 
   // Record (or reset) the session. A re-start of the same syncId clears any
   // half-staged batches so the run begins clean.
   await db
     .insert(s.syncSessions)
-    .values({ id: syncId, syncType, since, status: "open", startedAt })
+    .values({ id: syncId, syncType, since, pollSeconds, status: "open", startedAt })
     .onConflictDoUpdate({
       target: s.syncSessions.id,
-      set: { syncType, since, status: "open", startedAt, finishedAt: null, counts: null },
+      set: { syncType, since, pollSeconds, status: "open", startedAt, finishedAt: null, counts: null },
     });
 
   return NextResponse.json({ ok: true });

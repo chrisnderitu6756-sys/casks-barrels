@@ -112,13 +112,19 @@ export async function getThresholds(): Promise<Thresholds> {
   };
 }
 
-export async function getLastImport(): Promise<{ at: string; source: string | null } | null> {
+export async function getLastImport(): Promise<{
+  at: string;
+  source: string | null;
+  pollSeconds: number | null;
+} | null> {
   const rows = await db
     .select()
     .from(s.importRuns)
     .orderBy(asc(s.importRuns.at));
   const last = rows[rows.length - 1];
-  return last ? { at: last.at.toISOString(), source: last.source } : null;
+  return last
+    ? { at: last.at.toISOString(), source: last.source, pollSeconds: last.pollSeconds ?? null }
+    : null;
 }
 
 /** Convenience: everything the dashboard reads, in one round of queries. */

@@ -1,18 +1,20 @@
 import { Badge, Card, SectionHeader } from "@/components/ui";
 import { ImportPanel } from "@/components/setup/import-panel";
 import { ThresholdsPanel } from "@/components/setup/thresholds-panel";
+import { CutoverPanel } from "@/components/setup/cutover-panel";
 import { getAccounts, getLastImport, getOrders, getReps, getThresholds } from "@/lib/data/source";
-import { longDate } from "@/lib/format";
+import { getViewer } from "@/lib/data/scope";
 
 export const dynamic = "force-dynamic";
 
 export default async function SetupPage() {
-  const [lastImport, reps, accounts, orders, thresholds] = await Promise.all([
+  const [lastImport, reps, accounts, orders, thresholds, viewer] = await Promise.all([
     getLastImport(),
     getReps(),
     getAccounts(),
     getOrders(),
     getThresholds(),
+    getViewer(),
   ]);
 
   const freshness = lastImport
@@ -49,8 +51,8 @@ export default async function SetupPage() {
           <p className="mt-1 text-sm text-faint">Source: {lastImport.source}.</p>
         ) : null}
         <p className="mt-4 rounded-xl bg-surface-2 px-4 py-3 text-sm text-muted">
-          QuickBooks Desktop 2014 (UK) - scheduled &lsquo;Sales by Item Detail&rsquo; export &rarr; import. Figures are
-          invoiced sales.
+          QuickBooks Desktop 2014 (UK) &mdash; live sync from the on-site agent, or a manual &lsquo;Sales by Item
+          Detail&rsquo; export uploaded below. Figures are invoiced sales, net of VAT.
         </p>
       </Card>
 
@@ -72,6 +74,8 @@ export default async function SetupPage() {
           Managers see all customers and assign follow-ups. Reps see their own customers and submit visits.
         </p>
       </Card>
+
+      {viewer.isManager ? <CutoverPanel /> : null}
     </div>
   );
 }

@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { Suspense, type ReactNode } from "react";
 import { auth, signOut } from "@/auth";
+import { getLastImport } from "@/lib/data/source";
+import { LiveStatus } from "./live-status";
 import { SidebarNav, type NavItem } from "./sidebar-nav";
 
 const NAV: NavItem[] = [
@@ -22,6 +24,7 @@ export async function AppShell({ children }: { children: ReactNode }) {
 
   const user = session.user;
   const roleLabel = user.role === "manager" ? "Manager" : "Rep";
+  const lastImport = await getLastImport();
 
   return (
     <div className="flex min-h-screen">
@@ -66,6 +69,9 @@ export async function AppShell({ children }: { children: ReactNode }) {
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-10 flex items-center gap-4 border-b border-line bg-canvas/80 px-6 py-3 backdrop-blur">
           <span className="font-display text-lg text-ink md:hidden">Casks &amp; Barrels</span>
+          {lastImport ? (
+            <LiveStatus at={lastImport.at} pollSeconds={lastImport.pollSeconds} source={lastImport.source} />
+          ) : null}
           <div className="ml-auto flex items-center gap-4">
             <div className="text-right leading-tight">
               <div className="text-sm font-medium text-ink">{user.name}</div>

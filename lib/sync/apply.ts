@@ -56,6 +56,14 @@ export async function applyStagedSync(
   finishedAt: string,
   counts: Rec | null,
 ): Promise<ApplyResult> {
+  // The agent's poll cadence (for the dashboard's staleness window).
+  const [sess] = await db
+    .select({ pollSeconds: s.syncSessions.pollSeconds })
+    .from(s.syncSessions)
+    .where(eq(s.syncSessions.id, syncId))
+    .limit(1);
+  const pollSeconds = sess?.pollSeconds ?? null;
+
   // Gather staged records, concatenated in seq order within each entity.
   const batches = await db.select().from(s.syncBatches).where(eq(s.syncBatches.syncId, syncId));
   const byEntity: Record<string, Rec[]> = { customers: [], items: [], transactions: [], deletions: [] };
@@ -261,6 +269,7 @@ export async function applyStagedSync(
       ordersImported: typeof counts?.transactions === "number" ? (counts.transactions as number) : txns.length,
       source: "QuickBooks live sync",
       message: `${result.customers} customers, ${result.items} items, ${result.transactions} txns, ${result.deletions} deletions`,
+      pollSeconds,
     });
     await tx
       .update(s.syncSessions)

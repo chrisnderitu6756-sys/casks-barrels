@@ -120,6 +120,7 @@ export const syncSessions = pgTable("sync_sessions", {
   id: text("id").primaryKey(), // the syncId
   syncType: text("sync_type").notNull(), // "full" | "incremental"
   since: timestamp("since", { withTimezone: true }),
+  pollSeconds: integer("poll_seconds"), // the agent's configured cadence (heartbeat window)
   status: text("status").notNull().default("open"), // open | committed | discarded
   startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
   finishedAt: timestamp("finished_at", { withTimezone: true }),
@@ -150,4 +151,7 @@ export const importRuns = pgTable("import_runs", {
   ordersImported: integer("orders_imported").default(0).notNull(),
   source: text("source"),
   message: text("message"),
+  // For live-sync runs: the agent's poll cadence, so the dashboard's staleness
+  // window auto-tunes (amber ~3x, red ~10x). Null for manual imports.
+  pollSeconds: integer("poll_seconds"),
 });

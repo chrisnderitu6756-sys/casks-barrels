@@ -15,6 +15,13 @@
       "when": 1795699869149,
       "tag": "0001_sync_staging",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1795714986938,
+      "tag": "0002_sync_pollseconds",
+      "breakpoints": true
     }
   ]
 }
