@@ -1,4 +1,4 @@
-import { accounts, orders, productById } from "@/lib/data/sample-data";
+import type { Account, Order, Product } from "@/lib/types";
 import { Avatar, Badge, Card, SectionHeader } from "@/components/ui";
 
 /** A product is a gap when at least this share of similar accounts buy it. */
@@ -12,7 +12,7 @@ interface Gap {
   n: number;
 }
 
-function computeGaps() {
+function computeGaps(accounts: Account[], orders: Order[]) {
   const bought = new Map<string, Set<string>>();
   for (const o of orders) {
     const set = bought.get(o.accountId) ?? new Set<string>();
@@ -38,8 +38,17 @@ function computeGaps() {
     .filter((r) => r.gaps.length > 0);
 }
 
-export function RangeGaps() {
-  const rows = computeGaps();
+export function RangeGaps({
+  accounts,
+  orders,
+  products,
+}: {
+  accounts: Account[];
+  orders: Order[];
+  products: Product[];
+}) {
+  const rows = computeGaps(accounts, orders);
+  const productById = (id: string) => products.find((p) => p.id === id);
   return (
     <section className="space-y-5">
       <SectionHeader

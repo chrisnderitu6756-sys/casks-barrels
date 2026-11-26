@@ -1,9 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { accounts, orders, products } from "@/lib/data/sample-data";
 import { kes } from "@/lib/format";
-import type { AccountType, Area } from "@/lib/types";
+import type { Account, AccountType, Area, Order, Product } from "@/lib/types";
 import { Badge, Card, SectionHeader, cx } from "@/components/ui";
 
 const TYPES: AccountType[] = ["Restaurant", "Bar & lounge", "Hotel", "Retailer"];
@@ -69,7 +68,15 @@ function ProductList({ rows, max, tone, empty }: { rows: Row[]; max: number; ton
   );
 }
 
-export function ProductExplorer() {
+export function ProductExplorer({
+  accounts,
+  orders,
+  products,
+}: {
+  accounts: Account[];
+  orders: Order[];
+  products: Product[];
+}) {
   const [type, setType] = useState<AccountType | null>(null);
   const [area, setArea] = useState<Area | null>(null);
 
@@ -103,7 +110,7 @@ export function ProductExplorer() {
       max: rows[0]?.net ?? 0,
       accountCount: ids.size,
     };
-  }, [type, area]);
+  }, [type, area, accounts, orders, products]);
 
   return (
     <section className="space-y-5">

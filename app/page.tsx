@@ -3,11 +3,15 @@ import { Card, SectionHeader, Trend } from "@/components/ui";
 import { AttentionList } from "@/components/health/attention-list";
 import { PortfolioStats } from "@/components/health/portfolio-stats";
 import { getAttention, getRows } from "@/components/health/portfolio";
-import { accountById, DEMO_TODAY, followUps, repById } from "@/lib/data/sample-data";
+import { DEMO_TODAY, getAccounts, getFollowUps, getReps } from "@/lib/data/source";
 import { longDate, shortDate, signedPct } from "@/lib/format";
 
-export default function OverviewPage() {
-  const rows = getRows();
+export const dynamic = "force-dynamic";
+
+export default async function OverviewPage() {
+  const [rows, followUps, accounts, reps] = await Promise.all([getRows(), getFollowUps(), getAccounts(), getReps()]);
+  const accountById = (id: string) => accounts.find((a) => a.id === id);
+  const repById = (id: string) => reps.find((r) => r.id === id);
   const attention = getAttention(rows);
   const worst = attention[0];
   const open = followUps.filter((f) => f.status === "open").sort((a, b) => (a.reviewDate < b.reviewDate ? -1 : 1));

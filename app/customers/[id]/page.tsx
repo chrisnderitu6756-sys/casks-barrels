@@ -3,22 +3,28 @@ import { notFound } from "next/navigation";
 import { Avatar, Card, HealthBadge, SectionHeader } from "@/components/ui";
 import { FlagEvidence } from "@/components/health/flag-evidence";
 import { RhythmChart } from "@/components/health/rhythm-chart";
-import { accountById, accounts, DEMO_TODAY, orders as allOrders, ordersByAccount, productById, repById } from "@/lib/data/sample-data";
+import { DEMO_TODAY, getAccounts, getOrders, getProducts, getReps, getThresholds } from "@/lib/data/source";
 import { computeAccountHealth } from "@/lib/health";
 import { kes, shortDate } from "@/lib/format";
 
-export function generateStaticParams() {
-  return accounts.map((account) => ({ id: account.id }));
-}
+export const dynamic = "force-dynamic";
 
 export default async function CustomerPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const account = accountById(id);
+  const [accounts, allOrders, products, reps, thresholds] = await Promise.all([
+    getAccounts(),
+    getOrders(),
+    getProducts(),
+    getReps(),
+    getThresholds(),
+  ]);
+  const account = accounts.find((a) => a.id === id);
   if (!account) notFound();
+  const productById = (pid: string) => products.find((p) => p.id === pid);
 
-  const health = computeAccountHealth(account, allOrders, { today: DEMO_TODAY });
-  const orders = ordersByAccount(id);
-  const owner = repById(account.ownerId);
+  const health = computeAccountHealth(account, allOrders, { today: DEMO_TODAY, thresholds });
+  const orders = allOrders.filter((o) => o.accountId === id).sort((a, b) => (a.date < b.date ? -1 : 1));
+  const owner = reps.find((r) => r.id === account.ownerId);
   const recent = [...orders].sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 6);
 
   return (

@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { Card, SectionHeader, Stat } from "@/components/ui";
-import { accounts, orders, DEMO_TODAY } from "@/lib/data/sample-data";
+import { DEMO_TODAY } from "@/lib/data/sample-data";
 import { DEFAULT_THRESHOLDS, healthByAccount } from "@/lib/health";
-import type { Thresholds } from "@/lib/types";
+import type { Account, Order, Thresholds } from "@/lib/types";
+import { saveThresholds } from "./actions";
 
 interface Field {
   key: keyof Thresholds;
@@ -51,8 +52,18 @@ const FIELDS: Field[] = [
   },
 ];
 
-export function ThresholdsPanel() {
-  const [t, setT] = useState<Thresholds>(DEFAULT_THRESHOLDS);
+export function ThresholdsPanel({
+  accounts,
+  orders,
+  initial = DEFAULT_THRESHOLDS,
+}: {
+  accounts: Account[];
+  orders: Order[];
+  initial?: Thresholds;
+}) {
+  const [t, setT] = useState<Thresholds>(initial);
+  const [saved, setSaved] = useState(false);
+  const [pending, startTransition] = useTransition();
 
   const counts = useMemo(() => {
     const h = [...healthByAccount(accounts, orders, { today: DEMO_TODAY, thresholds: t }).values()];
@@ -64,9 +75,17 @@ export function ThresholdsPanel() {
       healthy: by("healthy"),
       flagged: h.filter((x) => x.flags.length > 0).length,
     };
-  }, [t]);
+  }, [t, accounts, orders]);
 
-  const changed = FIELDS.some((f) => t[f.key] !== DEFAULT_THRESHOLDS[f.key]);
+  const changed = FIELDS.some((f) => t[f.key] !== initial[f.key]);
+
+  function save() {
+    setSaved(false);
+    startTransition(async () => {
+      await saveThresholds(t);
+      setSaved(true);
+    });
+  }
 
   return (
     <Card className="p-6">
@@ -75,8 +94,15 @@ export function ThresholdsPanel() {
         intro="Thresholds are configurable without a code change."
         action={
           changed ? (
-            <button type="button" onClick={() => setT(DEFAULT_THRESHOLDS)} className="text-sm text-wine hover:underline">
-              Reset to defaults
+            <button
+              type="button"
+              onClick={() => {
+                setT(initial);
+                setSaved(false);
+              }}
+              className="text-sm text-wine hover:underline"
+            >
+              Reset
             </button>
           ) : undefined
         }
@@ -114,6 +140,18 @@ export function ThresholdsPanel() {
           <Stat value={counts.learning} label="Learning" />
           <Stat value={counts.healthy} label="Healthy" />
         </div>
+      </div>
+
+      <div className="mt-5 flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          disabled={pending || !changed}
+          onClick={save}
+          className="rounded-full bg-wine px-5 py-2 text-sm font-medium text-white disabled:opacity-40"
+        >
+          {pending ? "Saving…" : "Save thresholds"}
+        </button>
+        {saved ? <span className="text-sm text-healthy">Saved — health recalculated across the dashboard.</span> : null}
       </div>
     </Card>
   );

@@ -1,7 +1,11 @@
 import { ProductExplorer } from "@/components/products/product-explorer";
 import { RangeGaps } from "@/components/products/range-gaps";
+import { getDashboardData } from "@/lib/data/source";
 
-export default function ProductsPage() {
+export const dynamic = "force-dynamic";
+
+export default async function ProductsPage() {
+  const { accounts, orders, products } = await getDashboardData();
   return (
     <div className="mx-auto max-w-6xl space-y-12">
       <header>
@@ -11,8 +15,8 @@ export default function ProductsPage() {
           invoiced sales.
         </p>
       </header>
-      <ProductExplorer />
-      <RangeGaps />
+      <ProductExplorer accounts={accounts} orders={orders} products={products} />
+      <RangeGaps accounts={accounts} orders={orders} products={products} />
     </div>
   );
 }

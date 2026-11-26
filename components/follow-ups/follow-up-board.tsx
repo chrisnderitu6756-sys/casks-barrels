@@ -1,18 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import type { FollowUp } from "@/lib/types";
-import {
-  accountById,
-  accounts,
-  DEMO_TODAY,
-  followUps as seedFollowUps,
-  repById,
-  reps,
-  visitLogging,
-  visits,
-} from "@/lib/data/sample-data";
+import { useEffect, useState, useTransition } from "react";
+import type { Account, FollowUp, Rep, Visit } from "@/lib/types";
+// Client component: take the constant from sample-data directly (source.ts pulls in the DB client).
+import { DEMO_TODAY } from "@/lib/data/sample-data";
+import type { visitLogging as visitLoggingData } from "@/lib/data/sample-data";
+import { addFollowUp, assignFollowUp, closeFollowUp, reopenFollowUp } from "./actions";
 import { daysBetween, shortDate } from "@/lib/format";
 import { Avatar, Badge, Card, SectionHeader, Stat, cx } from "@/components/ui";
 
@@ -35,8 +29,24 @@ const primaryBtnCls =
 const dateOnly = (iso: string) => iso.slice(0, 10);
 const isOverdue = (f: FollowUp) => f.status === "open" && new Date(f.reviewDate) < DEMO_TODAY;
 
-export function FollowUpBoard() {
-  const [items, setItems] = useState<FollowUp[]>(seedFollowUps);
+export function FollowUpBoard({
+  followUps,
+  accounts,
+  reps,
+  visits,
+  visitLogging,
+}: {
+  followUps: FollowUp[];
+  accounts: Account[];
+  reps: Rep[];
+  visits: Visit[];
+  visitLogging: typeof visitLoggingData;
+}) {
+  const [items, setItems] = useState<FollowUp[]>(followUps);
+  const [pending, startTransition] = useTransition();
+  useEffect(() => setItems(followUps), [followUps]);
+  const accountById = (id: string) => accounts.find((a) => a.id === id);
+  const repById = (id: string) => reps.find((r) => r.id === id);
   const [filter, setFilter] = useState<Filter>("all");
   const [closingId, setClosingId] = useState<string | null>(null);
   const [reason, setReason] = useState("");
@@ -56,9 +66,26 @@ export function FollowUpBoard() {
   const update = (id: string, patch: Partial<FollowUp>) =>
     setItems((prev) => prev.map((f) => (f.id === id ? { ...f, ...patch } : f)));
 
+  const assign = (f: FollowUp, patch: { ownerId?: string; reviewDate?: string }) => {
+    update(f.id, patch);
+    startTransition(async () => {
+      await assignFollowUp(f.id, patch.ownerId ?? f.ownerId, patch.reviewDate ?? f.reviewDate);
+    });
+  };
+
+  const reopen = (id: string) => {
+    update(id, { status: "open", declineReason: undefined });
+    startTransition(async () => {
+      await reopenFollowUp(id);
+    });
+  };
+
   const confirmClose = (id: string) => {
     const trimmed = reason.trim();
     update(id, { status: "closed", declineReason: trimmed || undefined });
+    startTransition(async () => {
+      await closeFollowUp(id, trimmed || undefined);
+    });
     setClosingId(null);
     setReason("");
   };
@@ -103,9 +130,18 @@ export function FollowUpBoard() {
 
         {showAdd ? (
           <AddForm
-            onAdd={(f) => {
-              setItems((prev) => [f, ...prev]);
+            accounts={accounts}
+            reps={reps}
+            pending={pending}
+            onAdd={(input) => {
               setShowAdd(false);
+              startTransition(async () => {
+                const { id } = await addFollowUp(input);
+                setItems((prev) => [
+                  { id, ...input, status: "open", createdAt: DEMO_TODAY.toISOString() },
+                  ...prev,
+                ]);
+              });
             }}
           />
         ) : null}
@@ -162,7 +198,7 @@ export function FollowUpBoard() {
                         <select
                           className={cx(inputCls, "mt-0.5 block w-auto py-1.5")}
                           value={f.ownerId}
-                          onChange={(e) => update(f.id, { ownerId: e.target.value })}
+                          onChange={(e) => assign(f, { ownerId: e.target.value })}
                         >
                           {reps.map((r) => (
                             <option key={r.id} value={r.id}>
@@ -178,7 +214,7 @@ export function FollowUpBoard() {
                         type="date"
                         className={cx(inputCls, "mt-0.5 block w-auto py-1.5")}
                         value={dateOnly(f.reviewDate)}
-                        onChange={(e) => e.target.value && update(f.id, { reviewDate: e.target.value })}
+                        onChange={(e) => e.target.value && assign(f, { reviewDate: e.target.value })}
                       />
                     </label>
                     <div className="ml-auto flex gap-2">
@@ -197,7 +233,7 @@ export function FollowUpBoard() {
                         <button
                           type="button"
                           className={btnCls}
-                          onClick={() => update(f.id, { status: "open", declineReason: undefined })}
+                          onClick={() => reopen(f.id)}
                         >
                           Reopen
                         </button>
@@ -263,7 +299,17 @@ export function FollowUpBoard() {
   );
 }
 
-function AddForm({ onAdd }: { onAdd: (f: FollowUp) => void }) {
+function AddForm({
+  accounts,
+  reps,
+  pending,
+  onAdd,
+}: {
+  accounts: Account[];
+  reps: Rep[];
+  pending: boolean;
+  onAdd: (input: { accountId: string; action: string; ownerId: string; reviewDate: string }) => void;
+}) {
   const [accountId, setAccountId] = useState(accounts[0]?.id ?? "");
   const [action, setAction] = useState("");
   const [ownerId, setOwnerId] = useState(reps[0]?.id ?? "");
@@ -278,15 +324,7 @@ function AddForm({ onAdd }: { onAdd: (f: FollowUp) => void }) {
         onSubmit={(e) => {
           e.preventDefault();
           if (!valid) return;
-          onAdd({
-            id: `f-new-${Date.now()}`,
-            accountId,
-            action: action.trim(),
-            ownerId,
-            reviewDate,
-            status: "open",
-            createdAt: DEMO_TODAY.toISOString(),
-          });
+          onAdd({ accountId, action: action.trim(), ownerId, reviewDate });
         }}
       >
         <label className="text-xs text-muted">
@@ -323,7 +361,7 @@ function AddForm({ onAdd }: { onAdd: (f: FollowUp) => void }) {
           />
         </label>
         <div className="flex items-end">
-          <button type="submit" disabled={!valid} className={primaryBtnCls}>
+          <button type="submit" disabled={!valid || pending} className={primaryBtnCls}>
             Add follow-up
           </button>
         </div>

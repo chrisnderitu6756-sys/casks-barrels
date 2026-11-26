@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState, type FormEvent, type ReactNode } from "react";
-import type { Visit } from "@/lib/types";
-import { accounts, accountById, repById, reps, visits as seedVisits, DEMO_TODAY } from "@/lib/data/sample-data";
+import { useMemo, useState, useTransition, type FormEvent, type ReactNode } from "react";
+import type { Account, Rep, Visit } from "@/lib/types";
+import { DEMO_TODAY } from "@/lib/data/sample-data";
+import { logVisit } from "./actions";
 import { shortDate } from "@/lib/format";
 import { Avatar, Badge, Card, SectionHeader, cx } from "@/components/ui";
 
@@ -16,9 +17,6 @@ function fromLocalInput(v: string): string {
   const d = new Date(`${v}:00+03:00`);
   return Number.isNaN(d.getTime()) ? DEMO_TODAY.toISOString() : d.toISOString();
 }
-
-const defaultRep = reps.find((r) => r.role === "rep") ?? reps[0];
-const sortedAccounts = [...accounts].sort((a, b) => a.name.localeCompare(b.name));
 
 const inputCls =
   "w-full rounded-xl border border-line bg-surface px-4 py-3 text-base text-ink placeholder:text-faint focus:border-wine focus:outline-none focus:ring-2 focus:ring-wine/20";
@@ -39,10 +37,24 @@ function Field({ label, htmlFor, error, children }: { label: string; htmlFor: st
   );
 }
 
-export function VisitForm() {
-  const [list, setList] = useState<Visit[]>(seedVisits);
+export function VisitForm({
+  accounts,
+  reps,
+  recentVisits,
+}: {
+  accounts: Account[];
+  reps: Rep[];
+  recentVisits: Visit[];
+}) {
+  const defaultRep = reps.find((r) => r.role === "rep") ?? reps[0];
+  const sortedAccounts = useMemo(() => [...accounts].sort((a, b) => a.name.localeCompare(b.name)), [accounts]);
+  const accountById = (id: string) => accounts.find((a) => a.id === id);
+  const repById = (id: string) => reps.find((r) => r.id === id);
+
+  const [added, setAdded] = useState<Visit[]>([]);
+  const [pending, startTransition] = useTransition();
   const [accountId, setAccountId] = useState("");
-  const [repId, setRepId] = useState(defaultRep.id);
+  const [repId, setRepId] = useState(defaultRep?.id ?? "");
   const [when, setWhen] = useState(() => toLocalInput(DEMO_TODAY));
   const [stockObs, setStockObs] = useState("");
   const [displayObs, setDisplayObs] = useState("");
@@ -52,7 +64,11 @@ export function VisitForm() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState<{ name: string; followUp: boolean } | null>(null);
 
-  const recent = useMemo(() => [...list].sort((a, b) => (a.at < b.at ? 1 : -1)), [list]);
+  const recent = useMemo(() => {
+    const ids = new Set(recentVisits.map((v) => v.id));
+    const merged = [...added.filter((v) => !ids.has(v.id)), ...recentVisits];
+    return merged.sort((a, b) => (a.at < b.at ? 1 : -1));
+  }, [recentVisits, added]);
 
   function submit(e: FormEvent) {
     e.preventDefault();
@@ -61,8 +77,10 @@ export function VisitForm() {
       setNotice(null);
       return;
     }
-    const visit: Visit = {
-      id: `local-${Date.now()}`,
+    if (pending) return;
+    const name = accountById(accountId)?.name ?? "customer";
+    const wantsFollowUp = followUp && !!nextStep.trim();
+    const input = {
       accountId,
       repId,
       at: fromLocalInput(when),
@@ -70,18 +88,27 @@ export function VisitForm() {
       displayObs: displayObs.trim(),
       feedback: feedback.trim(),
       nextStep: nextStep.trim(),
+      createFollowUp: wantsFollowUp,
     };
-    setList((l) => [visit, ...l]);
-    setNotice({ name: accountById(accountId)?.name ?? "customer", followUp: followUp && !!nextStep.trim() });
-    setAccountId("");
-    setWhen(toLocalInput(DEMO_TODAY));
-    setStockObs("");
-    setDisplayObs("");
-    setFeedback("");
-    setNextStep("");
-    setFollowUp(false);
-    setError("");
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    startTransition(async () => {
+      try {
+        const visit = await logVisit(input);
+        setAdded((l) => [visit, ...l]);
+        setNotice({ name, followUp: wantsFollowUp });
+        setAccountId("");
+        setWhen(toLocalInput(DEMO_TODAY));
+        setStockObs("");
+        setDisplayObs("");
+        setFeedback("");
+        setNextStep("");
+        setFollowUp(false);
+        setError("");
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      } catch {
+        setNotice(null);
+        setError("Could not save the visit. Please try again.");
+      }
+    });
   }
 
   return (
@@ -156,9 +183,10 @@ export function VisitForm() {
 
           <button
             type="submit"
-            className="min-h-14 w-full rounded-xl bg-wine px-6 py-4 text-base font-semibold text-white shadow-sm transition active:scale-[0.99] hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-wine/40"
+            disabled={pending}
+            className="min-h-14 w-full rounded-xl bg-wine px-6 py-4 text-base font-semibold text-white shadow-sm transition active:scale-[0.99] hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-wine/40 disabled:opacity-60"
           >
-            Submit visit
+            {pending ? "Submitting…" : "Submit visit"}
           </button>
         </form>
       </Card>

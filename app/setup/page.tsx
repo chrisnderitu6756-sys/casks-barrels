@@ -1,10 +1,31 @@
 import { Badge, Card, SectionHeader } from "@/components/ui";
 import { ImportPanel } from "@/components/setup/import-panel";
 import { ThresholdsPanel } from "@/components/setup/thresholds-panel";
-import { DEMO_TODAY, reps } from "@/lib/data/sample-data";
+import { getAccounts, getLastImport, getOrders, getReps, getThresholds } from "@/lib/data/source";
 import { longDate } from "@/lib/format";
 
-export default function SetupPage() {
+export const dynamic = "force-dynamic";
+
+export default async function SetupPage() {
+  const [lastImport, reps, accounts, orders, thresholds] = await Promise.all([
+    getLastImport(),
+    getReps(),
+    getAccounts(),
+    getOrders(),
+    getThresholds(),
+  ]);
+
+  const freshness = lastImport
+    ? new Date(lastImport.at).toLocaleString("en-GB", {
+        timeZone: "Africa/Nairobi",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : "No import recorded yet";
+
   return (
     <div className="mx-auto max-w-4xl space-y-8">
       <div>
@@ -19,13 +40,14 @@ export default function SetupPage() {
         <SectionHeader title="Data source & freshness" />
         <div className="mt-4 flex items-center gap-3">
           <span className="h-2.5 w-2.5 rounded-full bg-healthy" />
-          <p className="text-ink">
-            Last successful data update: {longDate(DEMO_TODAY.toISOString())}, 08:15 EAT
-          </p>
+          <p className="text-ink">Last successful data update: {freshness} EAT</p>
         </div>
         <p className="mt-2 text-sm text-muted">
           If an import fails, we keep showing the last good update so stale data is obvious.
         </p>
+        {lastImport?.source ? (
+          <p className="mt-1 text-sm text-faint">Source: {lastImport.source}.</p>
+        ) : null}
         <p className="mt-4 rounded-xl bg-surface-2 px-4 py-3 text-sm text-muted">
           QuickBooks Desktop 2014 (UK) - scheduled &lsquo;Sales by Item Detail&rsquo; export &rarr; import. Figures are
           invoiced sales.
@@ -34,7 +56,7 @@ export default function SetupPage() {
 
       <ImportPanel />
 
-      <ThresholdsPanel />
+      <ThresholdsPanel accounts={accounts} orders={orders} initial={thresholds} />
 
       <Card className="p-6">
         <SectionHeader title="Users & roles" />

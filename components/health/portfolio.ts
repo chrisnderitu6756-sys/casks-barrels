@@ -1,5 +1,5 @@
 // Shared server-side selectors for the Customer Health module.
-import { accounts, DEMO_TODAY, orders, productById, repById } from "@/lib/data/sample-data";
+import { DEMO_TODAY, getDashboardData } from "@/lib/data/source";
 import { healthByAccount } from "@/lib/health";
 import type { Account, AccountHealth } from "@/lib/types";
 
@@ -10,15 +10,18 @@ export interface Row {
   headlineName: string | null;
 }
 
-export function getRows(): Row[] {
-  const healths = healthByAccount(accounts, orders, { today: DEMO_TODAY });
+export async function getRows(): Promise<Row[]> {
+  const { accounts, orders, reps, products, thresholds } = await getDashboardData();
+  const repById = new Map(reps.map((r) => [r.id, r]));
+  const productById = new Map(products.map((p) => [p.id, p]));
+  const healths = healthByAccount(accounts, orders, { today: DEMO_TODAY, thresholds });
   return accounts.map((account) => {
     const health = healths.get(account.id)!;
     return {
       account,
       health,
-      ownerName: repById(account.ownerId)?.name ?? "Unassigned",
-      headlineName: health.headline ? (productById(health.headline.productId)?.name ?? null) : null,
+      ownerName: repById.get(account.ownerId)?.name ?? "Unassigned",
+      headlineName: health.headline ? (productById.get(health.headline.productId)?.name ?? null) : null,
     };
   });
 }

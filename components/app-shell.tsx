@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Suspense, type ReactNode } from "react";
+import { auth, signOut } from "@/auth";
 import { SidebarNav, type NavItem } from "./sidebar-nav";
 
 const NAV: NavItem[] = [
@@ -11,7 +12,17 @@ const NAV: NavItem[] = [
   { href: "/setup", label: "Setup", icon: "⚙" },
 ];
 
-export function AppShell({ children }: { children: ReactNode }) {
+export async function AppShell({ children }: { children: ReactNode }) {
+  const session = await auth();
+
+  // Unauthenticated routes (the sign-in page) render standalone, without the
+  // app chrome. Every other route is gated by middleware, so a missing session
+  // here means we're on /login.
+  if (!session?.user) return <>{children}</>;
+
+  const user = session.user;
+  const roleLabel = user.role === "manager" ? "Manager" : "Rep";
+
   return (
     <div className="flex min-h-screen">
       <aside className="hidden w-64 shrink-0 flex-col bg-sidebar px-5 py-6 text-sidebar-ink md:flex">
@@ -55,9 +66,25 @@ export function AppShell({ children }: { children: ReactNode }) {
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-10 flex items-center gap-4 border-b border-line bg-canvas/80 px-6 py-3 backdrop-blur">
           <span className="font-display text-lg text-ink md:hidden">Casks &amp; Barrels</span>
-          <span className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-gold-soft px-2.5 py-1 text-xs font-medium text-gold">
-            Demo · sample data
-          </span>
+          <div className="ml-auto flex items-center gap-4">
+            <div className="text-right leading-tight">
+              <div className="text-sm font-medium text-ink">{user.name}</div>
+              <div className="text-xs text-muted">{roleLabel}</div>
+            </div>
+            <form
+              action={async () => {
+                "use server";
+                await signOut({ redirectTo: "/login" });
+              }}
+            >
+              <button
+                type="submit"
+                className="rounded-full border border-line bg-surface-2 px-3 py-1.5 text-xs font-medium text-ink hover:bg-wine-soft"
+              >
+                Sign out
+              </button>
+            </form>
+          </div>
         </header>
         <main className="flex-1 px-5 py-6 md:px-8">{children}</main>
       </div>

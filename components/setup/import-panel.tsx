@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useTransition } from "react";
 import { Badge, Card, SectionHeader, Stat } from "@/components/ui";
 import { kes, longDate } from "@/lib/format";
 import { productById } from "@/lib/data/sample-data";
@@ -11,12 +11,24 @@ import {
   slugify,
   type ImportResult,
 } from "@/lib/import/sales-by-item-detail";
+import { commitImport } from "./actions";
 
 export function ImportPanel() {
   const [text, setText] = useState("");
   const [fileName, setFileName] = useState<string | null>(null);
   const [result, setResult] = useState<ImportResult | null>(null);
+  const [applied, setApplied] = useState<{ ok: boolean; message: string } | null>(null);
+  const [pending, startTransition] = useTransition();
   const fileRef = useRef<HTMLInputElement>(null);
+
+  function apply() {
+    if (!text.trim()) return;
+    setApplied(null);
+    startTransition(async () => {
+      const res = await commitImport(text, fileName ?? undefined);
+      setApplied({ ok: res.ok, message: res.message });
+    });
+  }
 
   function onFile(file: File | undefined) {
     if (!file) return;
@@ -25,6 +37,7 @@ export function ImportPanel() {
       setText(String(reader.result ?? ""));
       setFileName(file.name);
       setResult(null);
+      setApplied(null);
     };
     reader.readAsText(file);
   }
@@ -33,6 +46,7 @@ export function ImportPanel() {
     setText(example);
     setFileName(null);
     setResult(null);
+    setApplied(null);
   }
 
   const accountName = (id: string) => result?.accounts.find((a) => a.id === id)?.fullName ?? id;
@@ -43,7 +57,7 @@ export function ImportPanel() {
     <Card className="p-6">
       <SectionHeader
         title="Import sales data"
-        intro={'Paste a "Sales by Item Detail" export (CSV) or load a .csv file. This is a preview only - it does not replace the live sample data.'}
+        intro={'Paste a "Sales by Item Detail" export (CSV) or load a .csv file. Preview it, then apply to add the orders to the live dashboard. Imports are additive - rows already present are skipped.'}
       />
 
       <div className="mt-4 flex flex-wrap items-center gap-3">
@@ -76,6 +90,7 @@ export function ImportPanel() {
         onChange={(e) => {
           setText(e.target.value);
           setResult(null);
+          setApplied(null);
         }}
         rows={8}
         spellCheck={false}
@@ -180,6 +195,32 @@ export function ImportPanel() {
                   </tbody>
                 </table>
               </div>
+            </div>
+          ) : null}
+
+          <div className="flex flex-wrap items-center gap-3 border-t border-line pt-5">
+            <button
+              type="button"
+              disabled={pending || !result.stats.hasQuantity || result.orders.length === 0}
+              onClick={apply}
+              className="rounded-full bg-wine px-5 py-2 text-sm font-medium text-white disabled:opacity-40"
+            >
+              {pending ? "Applying…" : "Apply import"}
+            </button>
+            <span className="text-xs text-faint">
+              Adds these orders to the live dashboard and updates the freshness stamp.
+            </span>
+          </div>
+
+          {applied ? (
+            <div
+              className={
+                applied.ok
+                  ? "rounded-xl border border-healthy/30 bg-healthy/5 p-4 text-sm text-healthy"
+                  : "rounded-xl border border-risk/30 bg-risk/5 p-4 text-sm text-risk"
+              }
+            >
+              {applied.message}
             </div>
           ) : null}
         </div>

@@ -1,8 +1,10 @@
 import { CustomersTable, type TableRow } from "@/components/health/customers-table";
 import { getRows } from "@/components/health/portfolio";
 
-export default function CustomersPage() {
-  const rows: TableRow[] = getRows().map(({ account, health, ownerName, headlineName }) => ({
+export const dynamic = "force-dynamic";
+
+export default async function CustomersPage() {
+  const rows: TableRow[] = (await getRows()).map(({ account, health, ownerName, headlineName }) => ({
     id: account.id,
     name: account.name,
     type: account.type,
