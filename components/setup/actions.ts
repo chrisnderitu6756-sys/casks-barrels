@@ -44,7 +44,10 @@ export async function importSalesXlsx(formData: FormData): Promise<{
     }
 
     const buf = await file.arrayBuffer();
-    const wb = XLSX.read(buf, { type: "array", cellDates: true });
+    // No cellDates: let date cells arrive as Excel serial numbers, which
+    // toISODate converts via UTC. This is timezone-independent, so the same
+    // export produces identical order ids (and dedupes) on any server.
+    const wb = XLSX.read(buf, { type: "array" });
 
     const sheet = wb.Sheets["Sheet1"] ?? wb.Sheets[wb.SheetNames[wb.SheetNames.length - 1]];
     if (!sheet) {
