@@ -4,12 +4,22 @@ import { AttentionList } from "@/components/health/attention-list";
 import { PortfolioStats } from "@/components/health/portfolio-stats";
 import { getAttention, getRows } from "@/components/health/portfolio";
 import { DEMO_TODAY, getAccounts, getFollowUps, getReps } from "@/lib/data/source";
+import { getViewer } from "@/lib/data/scope";
 import { longDate, shortDate, signedPct } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
 export default async function OverviewPage() {
-  const [rows, followUps, accounts, reps] = await Promise.all([getRows(), getFollowUps(), getAccounts(), getReps()]);
+  const viewer = await getViewer();
+  const [allRows, allFollowUps, accounts, reps] = await Promise.all([
+    getRows(),
+    getFollowUps(),
+    getAccounts(),
+    getReps(),
+  ]);
+  const rows = viewer.isManager ? allRows : allRows.filter((r) => r.account.ownerId === viewer.repId);
+  const ownedIds = new Set(rows.map((r) => r.account.id));
+  const followUps = viewer.isManager ? allFollowUps : allFollowUps.filter((f) => ownedIds.has(f.accountId));
   const accountById = (id: string) => accounts.find((a) => a.id === id);
   const repById = (id: string) => reps.find((r) => r.id === id);
   const attention = getAttention(rows);

@@ -4,6 +4,7 @@ import { Avatar, Card, HealthBadge, SectionHeader } from "@/components/ui";
 import { FlagEvidence } from "@/components/health/flag-evidence";
 import { RhythmChart } from "@/components/health/rhythm-chart";
 import { DEMO_TODAY, getAccounts, getOrders, getProducts, getReps, getThresholds } from "@/lib/data/source";
+import { canSee, getViewer } from "@/lib/data/scope";
 import { computeAccountHealth } from "@/lib/health";
 import { kes, shortDate } from "@/lib/format";
 
@@ -11,6 +12,7 @@ export const dynamic = "force-dynamic";
 
 export default async function CustomerPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const viewer = await getViewer();
   const [accounts, allOrders, products, reps, thresholds] = await Promise.all([
     getAccounts(),
     getOrders(),
@@ -19,7 +21,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
     getThresholds(),
   ]);
   const account = accounts.find((a) => a.id === id);
-  if (!account) notFound();
+  if (!account || !canSee(viewer, account)) notFound();
   const productById = (pid: string) => products.find((p) => p.id === pid);
 
   const health = computeAccountHealth(account, allOrders, { today: DEMO_TODAY, thresholds });
@@ -37,7 +39,8 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
         <div>
           <h1 className="font-display text-4xl text-ink sm:text-5xl">{account.name}</h1>
           <p className="mt-2 text-muted">
-            {account.type} · {account.area}
+            {account.type}
+            {account.area ? ` · ${account.area}` : ""}
           </p>
         </div>
         <div className="flex items-center gap-4">

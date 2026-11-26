@@ -1,10 +1,14 @@
 import { CustomersTable, type TableRow } from "@/components/health/customers-table";
 import { getRows } from "@/components/health/portfolio";
+import { getViewer } from "@/lib/data/scope";
 
 export const dynamic = "force-dynamic";
 
 export default async function CustomersPage() {
-  const rows: TableRow[] = (await getRows()).map(({ account, health, ownerName, headlineName }) => ({
+  const viewer = await getViewer();
+  const rows: TableRow[] = (await getRows())
+    .filter((r) => viewer.isManager || r.account.ownerId === viewer.repId)
+    .map(({ account, health, ownerName, headlineName }) => ({
     id: account.id,
     name: account.name,
     type: account.type,

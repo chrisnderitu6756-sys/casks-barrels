@@ -1,11 +1,16 @@
 import { ProductExplorer } from "@/components/products/product-explorer";
 import { RangeGaps } from "@/components/products/range-gaps";
 import { getDashboardData } from "@/lib/data/source";
+import { getViewer, visibleAccountIds } from "@/lib/data/scope";
 
 export const dynamic = "force-dynamic";
 
 export default async function ProductsPage() {
-  const { accounts, orders, products } = await getDashboardData();
+  const viewer = await getViewer();
+  const { accounts: allAccounts, orders: allOrders, products } = await getDashboardData();
+  const visible = visibleAccountIds(viewer, allAccounts);
+  const accounts = visible ? allAccounts.filter((a) => visible.has(a.id)) : allAccounts;
+  const orders = visible ? allOrders.filter((o) => visible.has(o.accountId)) : allOrders;
   return (
     <div className="mx-auto max-w-6xl space-y-12">
       <header>
