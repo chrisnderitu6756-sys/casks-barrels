@@ -1,13 +1,12 @@
-CREATE TYPE "public"."account_type" AS ENUM('Restaurant', 'Bar & lounge', 'Hotel', 'Retailer');--> statement-breakpoint
-CREATE TYPE "public"."area" AS ENUM('Westlands', 'Kilimani', 'Karen');--> statement-breakpoint
-CREATE TYPE "public"."doc_type" AS ENUM('invoice', 'sales-receipt');--> statement-breakpoint
+CREATE TYPE "public"."doc_type" AS ENUM('invoice', 'sales-receipt', 'credit-note');--> statement-breakpoint
 CREATE TYPE "public"."follow_up_status" AS ENUM('open', 'closed');--> statement-breakpoint
 CREATE TYPE "public"."role" AS ENUM('manager', 'rep');--> statement-breakpoint
 CREATE TABLE "accounts" (
 	"id" text PRIMARY KEY NOT NULL,
 	"name" text NOT NULL,
-	"type" "account_type" NOT NULL,
-	"area" "area" NOT NULL,
+	"type" text NOT NULL,
+	"area" text,
+	"route" text,
 	"owner_id" text,
 	"parent_id" text,
 	"cycle_days" integer NOT NULL,
@@ -67,9 +66,16 @@ CREATE TABLE "reps" (
 	CONSTRAINT "reps_email_unique" UNIQUE("email")
 );
 --> statement-breakpoint
+CREATE TABLE "routes" (
+	"id" text PRIMARY KEY NOT NULL,
+	"name" text NOT NULL,
+	"owner_id" text,
+	"active" boolean DEFAULT true NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "thresholds" (
 	"id" integer PRIMARY KEY NOT NULL,
-	"stopped_cycle_multiplier" double precision NOT NULL,
+	"stopped_days" integer NOT NULL,
 	"changed_cycle_multiplier" double precision NOT NULL,
 	"reduced_drop_pct" double precision NOT NULL,
 	"min_orders_to_assess" integer NOT NULL

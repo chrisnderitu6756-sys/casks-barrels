@@ -1,5 +1,5 @@
 {
-  "id": "04776892-8d19-4c6b-afa7-b77d197f3ca5",
+  "id": "7b1fe9c4-1c4a-4dab-a0eb-f4ad0beb1eb9",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -22,17 +22,21 @@
         },
         "type": {
           "name": "type",
-          "type": "account_type",
-          "typeSchema": "public",
+          "type": "text",
           "primaryKey": false,
           "notNull": true
         },
         "area": {
           "name": "area",
-          "type": "area",
-          "typeSchema": "public",
+          "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
+        },
+        "route": {
+          "name": "route",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         },
         "owner_id": {
           "name": "owner_id",
@@ -407,6 +411,44 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.routes": {
+      "name": "routes",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "owner_id": {
+          "name": "owner_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "active": {
+          "name": "active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.thresholds": {
       "name": "thresholds",
       "schema": "",
@@ -417,9 +459,9 @@
           "primaryKey": true,
           "notNull": true
         },
-        "stopped_cycle_multiplier": {
-          "name": "stopped_cycle_multiplier",
-          "type": "double precision",
+        "stopped_days": {
+          "name": "stopped_days",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true
         },
@@ -517,31 +559,13 @@
     }
   },
   "enums": {
-    "public.account_type": {
-      "name": "account_type",
-      "schema": "public",
-      "values": [
-        "Restaurant",
-        "Bar & lounge",
-        "Hotel",
-        "Retailer"
-      ]
-    },
-    "public.area": {
-      "name": "area",
-      "schema": "public",
-      "values": [
-        "Westlands",
-        "Kilimani",
-        "Karen"
-      ]
-    },
     "public.doc_type": {
       "name": "doc_type",
       "schema": "public",
       "values": [
         "invoice",
-        "sales-receipt"
+        "sales-receipt",
+        "credit-note"
       ]
     },
     "public.follow_up_status": {

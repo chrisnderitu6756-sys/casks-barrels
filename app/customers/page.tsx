@@ -8,7 +8,7 @@ export default async function CustomersPage() {
     id: account.id,
     name: account.name,
     type: account.type,
-    area: account.area,
+    area: account.area ?? null,
     status: health.status,
     cycleDays: account.cycleDays,
     daysSinceLastOrder: health.daysSinceLastOrder,

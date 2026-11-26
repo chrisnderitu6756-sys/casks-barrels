@@ -16,6 +16,7 @@ import type {
   OrderLine,
   Product,
   Rep,
+  Route,
   Thresholds,
   Visit,
 } from "@/lib/types";
@@ -28,8 +29,12 @@ export async function getProducts(): Promise<Product[]> {
 
 export async function getReps(): Promise<Rep[]> {
   return db
-    .select({ id: s.reps.id, name: s.reps.name, role: s.reps.role })
+    .select({ id: s.reps.id, name: s.reps.name, email: s.reps.email, role: s.reps.role })
     .from(s.reps);
+}
+
+export async function getRoutes(): Promise<Route[]> {
+  return db.select().from(s.routes);
 }
 
 export async function getAccounts(): Promise<Account[]> {
@@ -38,7 +43,8 @@ export async function getAccounts(): Promise<Account[]> {
     id: r.id,
     name: r.name,
     type: r.type,
-    area: r.area,
+    area: r.area ?? null,
+    route: r.route ?? null,
     ownerId: r.ownerId ?? "",
     parentId: r.parentId ?? undefined,
     cycleDays: r.cycleDays,
@@ -99,9 +105,9 @@ export async function getFollowUps(): Promise<FollowUp[]> {
 export async function getThresholds(): Promise<Thresholds> {
   const [row] = await db.select().from(s.thresholds).limit(1);
   return {
-    stoppedCycleMultiplier: row?.stoppedCycleMultiplier ?? 2.5,
-    changedCycleMultiplier: row?.changedCycleMultiplier ?? 1.3,
-    reducedDropPct: row?.reducedDropPct ?? 0.25,
+    stoppedDays: row?.stoppedDays ?? 35,
+    changedCycleMultiplier: row?.changedCycleMultiplier ?? 1.5,
+    reducedDropPct: row?.reducedDropPct ?? 0.3,
     minOrdersToAssess: row?.minOrdersToAssess ?? 3,
   };
 }

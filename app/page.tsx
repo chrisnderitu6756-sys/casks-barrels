@@ -90,7 +90,7 @@ export default async function OverviewPage() {
               </div>
             </div>
             <div className="border-t border-line bg-surface-2 px-6 py-3 text-xs text-faint sm:px-8">
-              Based on sample order history · cause unconfirmed.
+              Based on invoiced order history · cause unconfirmed.
             </div>
           </Card>
         </section>
@@ -123,7 +123,7 @@ export default async function OverviewPage() {
       </section>
 
       <footer className="border-t border-line pt-6 text-sm text-faint">
-        Today, 08:15 EAT · All customers and figures are fictional.
+        Figures are invoiced sales from QuickBooks, net of VAT.
       </footer>
     </div>
   );

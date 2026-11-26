@@ -13,14 +13,9 @@ import {
 } from "drizzle-orm/pg-core";
 
 export const roleEnum = pgEnum("role", ["manager", "rep"]);
-export const areaEnum = pgEnum("area", ["Westlands", "Kilimani", "Karen"]);
-export const accountTypeEnum = pgEnum("account_type", [
-  "Restaurant",
-  "Bar & lounge",
-  "Hotel",
-  "Retailer",
-]);
-export const docTypeEnum = pgEnum("doc_type", ["invoice", "sales-receipt"]);
+// Customer type and area are free-form text (real QuickBooks values vary widely),
+// so they are plain text columns rather than enums.
+export const docTypeEnum = pgEnum("doc_type", ["invoice", "sales-receipt", "credit-note"]);
 export const followUpStatusEnum = pgEnum("follow_up_status", ["open", "closed"]);
 
 /** Users — managers and reps. passwordHash present for sign-in accounts. */
@@ -42,12 +37,21 @@ export const products = pgTable("products", {
 export const accounts = pgTable("accounts", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
-  type: accountTypeEnum("type").notNull(),
-  area: areaEnum("area").notNull(),
+  type: text("type").notNull(),
+  area: text("area"),
+  route: text("route"),
   ownerId: text("owner_id").references(() => reps.id),
   parentId: text("parent_id"),
   cycleDays: integer("cycle_days").notNull(),
   knownServiceIssue: boolean("known_service_issue").default(false).notNull(),
+});
+
+/** Delivery routes a rep covers — reps enter these; drives route-coverage. */
+export const routes = pgTable("routes", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  ownerId: text("owner_id"),
+  active: boolean("active").default(true).notNull(),
 });
 
 export const orders = pgTable("orders", {
@@ -96,7 +100,7 @@ export const followUps = pgTable("follow_ups", {
 /** Single-row settings: the configurable health thresholds. */
 export const thresholds = pgTable("thresholds", {
   id: integer("id").primaryKey(),
-  stoppedCycleMultiplier: doublePrecision("stopped_cycle_multiplier").notNull(),
+  stoppedDays: integer("stopped_days").notNull(),
   changedCycleMultiplier: doublePrecision("changed_cycle_multiplier").notNull(),
   reducedDropPct: doublePrecision("reduced_drop_pct").notNull(),
   minOrdersToAssess: integer("min_orders_to_assess").notNull(),

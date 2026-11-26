@@ -10,7 +10,8 @@ const fraunces = Fraunces({ variable: "--font-display-serif", subsets: ["latin"]
 export const metadata: Metadata = {
   title: "Casks & Barrels — Account Intelligence",
   description:
-    "A bespoke customer intelligence demonstration for Casks & Barrels, by Simply Done Africa. All account data is illustrative.",
+    "Customer intelligence for Casks & Barrels — retention signals computed from invoiced QuickBooks sales.",
+  icons: { icon: "/cb-logo.jpg" },
 };
 
 export default function RootLayout({

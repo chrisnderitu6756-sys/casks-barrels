@@ -20,7 +20,10 @@ import type {
 } from "../types";
 
 /** Stable demo clock (EAT). Health "days since last order" is measured from here. */
-export const DEMO_TODAY = new Date("2026-11-20T08:15:00+03:00");
+// Reference "today" for health: anchored to the latest date in James's export
+// (the data runs 5 Jan – 26 Nov 2026). Kept as DEMO_TODAY so the many importers
+// of it don't need to change; it is the as-of date the dashboard reasons from.
+export const DEMO_TODAY = new Date("2026-11-26T18:00:00+03:00");
 
 function addDays(base: Date, days: number): Date {
   const d = new Date(base);

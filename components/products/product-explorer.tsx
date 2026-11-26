@@ -2,11 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { kes } from "@/lib/format";
-import type { Account, AccountType, Area, Order, Product } from "@/lib/types";
+import type { Account, Order, Product } from "@/lib/types";
 import { Badge, Card, SectionHeader, cx } from "@/components/ui";
-
-const TYPES: AccountType[] = ["Restaurant", "Bar & lounge", "Hotel", "Retailer"];
-const AREAS: Area[] = ["Westlands", "Kilimani", "Karen"];
 
 interface Row {
   id: string;
@@ -77,13 +74,18 @@ export function ProductExplorer({
   orders: Order[];
   products: Product[];
 }) {
-  const [type, setType] = useState<AccountType | null>(null);
-  const [area, setArea] = useState<Area | null>(null);
+  const [type, setType] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+
+  // Customer-type options are derived from the accounts prop at runtime —
+  // distinct, sorted, de-duplicated — never hard-coded.
+  const types = useMemo(
+    () => Array.from(new Set(accounts.map((a) => a.type).filter(Boolean))).sort((a, b) => a.localeCompare(b)),
+    [accounts],
+  );
 
   const { leading, slower, max, accountCount } = useMemo(() => {
-    const ids = new Set(
-      accounts.filter((a) => (!type || a.type === type) && (!area || a.area === area)).map((a) => a.id),
-    );
+    const ids = new Set(accounts.filter((a) => !type || a.type === type).map((a) => a.id));
     const totals = new Map<string, { units: number; net: number }>();
     for (const o of orders) {
       if (!ids.has(o.accountId)) continue;
@@ -94,7 +96,9 @@ export function ProductExplorer({
         totals.set(l.productId, t);
       }
     }
+    const q = search.trim().toLowerCase();
     const rows: Row[] = products
+      .filter((p) => q === "" || p.name.toLowerCase().includes(q))
       .map((p) => ({
         id: p.id,
         name: p.name,
@@ -110,29 +114,30 @@ export function ProductExplorer({
       max: rows[0]?.net ?? 0,
       accountCount: ids.size,
     };
-  }, [type, area, accounts, orders, products]);
+  }, [type, search, accounts, orders, products]);
 
   return (
     <section className="space-y-5">
       <SectionHeader
         title="Leading products and slower movers"
-        intro="Ranked by invoiced net sales across all orders. Narrow by customer type or area to see what moves where."
+        intro="Ranked by invoiced net sales across all orders. Narrow by customer type to see what moves where."
       />
       <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs font-medium uppercase tracking-wide text-faint">Type</span>
           <Chip active={type === null} onClick={() => setType(null)}>All</Chip>
-          {TYPES.map((t) => (
+          {types.map((t) => (
             <Chip key={t} active={type === t} onClick={() => setType(type === t ? null : t)}>{t}</Chip>
           ))}
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-medium uppercase tracking-wide text-faint">Area</span>
-          <Chip active={area === null} onClick={() => setArea(null)}>All</Chip>
-          {AREAS.map((a) => (
-            <Chip key={a} active={area === a} onClick={() => setArea(area === a ? null : a)}>{a}</Chip>
-          ))}
-        </div>
+        <input
+          type="search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search products by name…"
+          aria-label="Search products by name"
+          className="w-full max-w-xs rounded-full border border-line bg-surface px-4 py-1.5 text-xs text-ink placeholder:text-faint focus:border-wine focus:outline-none"
+        />
         <span className="text-xs text-faint">{accountCount} customer{accountCount === 1 ? "" : "s"} in view</span>
       </div>
       <div className="grid gap-5 lg:grid-cols-2">

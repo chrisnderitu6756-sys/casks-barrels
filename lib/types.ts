@@ -5,8 +5,10 @@
 // same shapes without a rebuild.
 // ---------------------------------------------------------------------------
 
-export type Area = "Westlands" | "Kilimani" | "Karen";
-export type AccountType = "Restaurant" | "Bar & lounge" | "Hotel" | "Retailer";
+// Real QuickBooks values are free-form (e.g. "Hotels", "Liquour Store/Bar",
+// "Supermarkets", "Restaurants", "Camps"), so these are open strings, not unions.
+export type Area = string;
+export type AccountType = string;
 export type UserRole = "manager" | "rep";
 
 /** Health classification shown across the dashboard. */
@@ -18,6 +20,7 @@ export type FlagType = "reduced" | "changed-cycle" | "stopped";
 export interface Rep {
   id: string;
   name: string;
+  email?: string | null;
   role: UserRole;
 }
 
@@ -43,7 +46,7 @@ export interface Order {
   accountId: string;
   /** ISO date. */
   date: string;
-  docType: "invoice" | "sales-receipt";
+  docType: "invoice" | "sales-receipt" | "credit-note";
   lines: OrderLine[];
 }
 
@@ -51,12 +54,15 @@ export interface Account {
   id: string;
   name: string;
   type: AccountType;
-  area: Area;
-  /** Rep id who owns the relationship. */
+  /** Delivery area / route. QuickBooks doesn't carry it, so it's null until a
+   *  rep assigns the account to a route. */
+  area?: string | null;
+  route?: string | null;
+  /** Rep id who owns the relationship ("" when unassigned). */
   ownerId: string;
-  /** Parent account id when this is a QuickBooks sub-account / job. */
+  /** Parent account id when this is a QuickBooks sub-account / branch. */
   parentId?: string;
-  /** Usual order interval in days. */
+  /** Usual order interval in days (fallback when history is thin). */
   cycleDays: number;
   /** A service/operational problem recorded in the team's records. */
   knownServiceIssue?: boolean;
@@ -92,14 +98,23 @@ export interface FollowUp {
 
 /** Health thresholds — configurable by a manager, never hard-coded. */
 export interface Thresholds {
-  /** days since last order > cycle * this ⇒ "stopped". */
-  stoppedCycleMultiplier: number;
-  /** days since last order > cycle * this ⇒ "changed-cycle". */
+  /** days since last order >= this ⇒ "stopped" (James: 35). */
+  stoppedDays: number;
+  /** days since last order > the account's typical cycle * this (but < stoppedDays)
+   *  ⇒ "changed-cycle". */
   changedCycleMultiplier: number;
-  /** a product's uptake drop >= this (0–1) ⇒ "reduced". */
+  /** a product's uptake drop >= this (0–1) ⇒ "reduced" (James: 0.30). */
   reducedDropPct: number;
   /** fewer completed orders than this ⇒ "learning". */
   minOrdersToAssess: number;
+}
+
+/** A delivery route a rep covers; drives route-coverage reporting. */
+export interface Route {
+  id: string;
+  name: string;
+  ownerId: string | null;
+  active: boolean;
 }
 
 // ---- Computed health -------------------------------------------------------

@@ -39,8 +39,9 @@ export async function commitImport(
     .map((a) => ({
       id: a.id,
       name: a.name,
-      type: "Retailer" as const,
-      area: "Westlands" as const,
+      type: "Uncategorised",
+      area: null,
+      route: null,
       ownerId: null,
       parentId: a.parentId ?? null,
       cycleDays: 30,

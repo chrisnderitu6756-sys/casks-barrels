@@ -36,6 +36,12 @@ export default async function LoginPage({
     <main className="flex min-h-screen items-center justify-center bg-canvas px-4 py-12">
       <div className="w-full max-w-sm">
         <div className="mb-6 text-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/cb-logo.jpg"
+            alt="Casks & Barrels"
+            className="mx-auto mb-4 h-24 w-24 rounded-2xl object-contain ring-1 ring-line"
+          />
           <h1 className="font-display text-3xl text-ink">Casks &amp; Barrels</h1>
           <p className="mt-1 text-sm text-muted">Account intelligence</p>
         </div>
@@ -80,7 +86,7 @@ export default async function LoginPage({
         </Card>
 
         <p className="mt-4 text-center text-xs text-muted">
-          Demo login: mary@casksandbarrels.demo / casks1234
+          A solution by Simply Done Africa
         </p>
       </div>
     </main>

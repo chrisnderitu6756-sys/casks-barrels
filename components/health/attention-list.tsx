@@ -16,7 +16,7 @@ export function AttentionList({ rows }: { rows: Row[] }) {
           <div className="min-w-0 flex-1">
             <div className="truncate font-medium text-ink">{account.name}</div>
             <div className="truncate text-sm text-muted">
-              {health.flags[0] ? FLAG_LABEL[health.flags[0]] : "Worth a look"} · {account.area}
+              {health.flags[0] ? FLAG_LABEL[health.flags[0]] : "Worth a look"} · {account.area ?? account.type}
             </div>
           </div>
           {health.headline && headlineName ? (

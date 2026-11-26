@@ -89,7 +89,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
         </Card>
       </section>
 
-      <p className="text-sm text-faint">Based on sample order history · cause unconfirmed.</p>
+      <p className="text-sm text-faint">Based on invoiced order history · cause unconfirmed.</p>
     </div>
   );
 }

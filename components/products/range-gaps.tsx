@@ -74,7 +74,7 @@ export function RangeGaps({
                       <Avatar name={acc.name} />
                       <div>
                         <div className="font-medium text-ink">{acc.name}</div>
-                        <div className="text-xs text-muted">{acc.type} · {acc.area}</div>
+                        <div className="text-xs text-muted">{acc.area ? `${acc.type} · ${acc.area}` : acc.type}</div>
                       </div>
                     </div>
                   </td>
@@ -84,7 +84,7 @@ export function RangeGaps({
                         <li key={g.productId} className="flex flex-wrap items-center gap-x-3 gap-y-1">
                           <Badge tone="gold">{productById(g.productId)?.name ?? g.productId}</Badge>
                           <span className="text-xs text-muted">
-                            {g.k} of {g.n} similar {acc.type.toLowerCase()}s stock this.
+                            {g.k} of {g.n} similar customers stock this.
                           </span>
                         </li>
                       ))}
@@ -98,7 +98,7 @@ export function RangeGaps({
       </Card>
       <p className="text-xs text-faint">
         Similar = same customer type. A gap needs at least {Math.round(MIN_SHARE * 100)}% of similar customers to have
-        invoiced the product, and this customer never has. Illustrative data.
+        invoiced the product, and this customer never has.
       </p>
     </section>
   );

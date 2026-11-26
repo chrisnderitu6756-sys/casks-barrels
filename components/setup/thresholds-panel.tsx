@@ -19,18 +19,10 @@ interface Field {
 
 const FIELDS: Field[] = [
   {
-    key: "changedCycleMultiplier",
-    label: "Days-since-last-order multiplier for 'reorder overdue'",
-    hint: "Flag when days since the last order exceed the usual cycle times this.",
-    step: 0.1,
-    min: 1,
-    scale: 1,
-  },
-  {
-    key: "stoppedCycleMultiplier",
-    label: "Days-since-last-order multiplier for 'stopped ordering'",
-    hint: "Flag as stopped when days since the last order exceed the usual cycle times this.",
-    step: 0.1,
+    key: "stoppedDays",
+    label: "Days with no order before 'stopped'",
+    hint: "Flag as stopped when an account hasn't ordered for at least this many days.",
+    step: 1,
     min: 1,
     scale: 1,
   },
@@ -41,6 +33,14 @@ const FIELDS: Field[] = [
     step: 1,
     min: 1,
     scale: 100,
+  },
+  {
+    key: "changedCycleMultiplier",
+    label: "'Reorder overdue' multiplier vs the account's usual rhythm",
+    hint: "Flag overdue when the gap since the last order exceeds the account's typical interval times this (but it isn't yet stopped).",
+    step: 0.1,
+    min: 1,
+    scale: 1,
   },
   {
     key: "minOrdersToAssess",

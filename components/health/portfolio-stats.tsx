@@ -12,12 +12,15 @@ const ITEMS: { status: HealthStatus; key: "healthy" | "atRisk" | "serviceIssue" 
 
 export function PortfolioStats({ rows }: { rows: Row[] }) {
   const s = portfolioSummary(rows.map((r) => r.health));
+  const typeCount = new Set(rows.map((r) => r.account.type).filter(Boolean)).size;
   return (
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
       <Card className="col-span-2 p-5 lg:col-span-1">
         <div className="font-display text-4xl text-ink tabular-nums">{s.total}</div>
-        <div className="mt-1 text-sm font-medium text-ink">Sample accounts</div>
-        <div className="text-xs text-faint">Across Westlands, Kilimani &amp; Karen</div>
+        <div className="mt-1 text-sm font-medium text-ink">Customers</div>
+        <div className="text-xs text-faint">
+          Across {typeCount} customer type{typeCount === 1 ? "" : "s"}
+        </div>
       </Card>
       {ITEMS.map((it) => (
         <Card key={it.status} className="p-5">

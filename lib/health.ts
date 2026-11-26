@@ -16,9 +16,9 @@ import type {
 } from "./types";
 
 export const DEFAULT_THRESHOLDS: Thresholds = {
-  stoppedCycleMultiplier: 2.5,
-  changedCycleMultiplier: 1.3,
-  reducedDropPct: 0.25,
+  stoppedDays: 35, // James: no sales in 35+ days ⇒ gone quiet
+  changedCycleMultiplier: 1.5,
+  reducedDropPct: 0.3, // James: a usual order down by 30%+ ⇒ buying less
   minOrdersToAssess: 3,
 };
 
@@ -71,14 +71,27 @@ export function computeAccountHealth(
     ? [...uptake].sort((a, b) => Math.abs(b.pctChange) - Math.abs(a.pctChange))[0]
     : undefined;
 
+  // Typical reorder interval: the median gap between this account's own orders,
+  // falling back to the configured cycle when history is thin. This lets
+  // "reorder overdue" respect each account's natural rhythm.
+  const gaps: number[] = [];
+  for (let i = 1; i < accountOrders.length; i++) {
+    const prev = new Date(accountOrders[i - 1]!.date).getTime();
+    const cur = new Date(accountOrders[i]!.date).getTime();
+    gaps.push((cur - prev) / 86_400_000);
+  }
+  const typicalCycle = gaps.length
+    ? [...gaps].sort((a, b) => a - b)[Math.floor(gaps.length / 2)]!
+    : account.cycleDays;
+
   const flags: FlagType[] = [];
   const assessable = orderCount >= t.minOrdersToAssess;
   if (assessable) {
     const worstDrop = uptake.length ? uptake[0]!.pctChange : 0;
     if (worstDrop <= -t.reducedDropPct) flags.push("reduced");
     if (daysSinceLastOrder != null) {
-      if (daysSinceLastOrder > account.cycleDays * t.stoppedCycleMultiplier) flags.push("stopped");
-      else if (daysSinceLastOrder > account.cycleDays * t.changedCycleMultiplier)
+      if (daysSinceLastOrder >= t.stoppedDays) flags.push("stopped");
+      else if (daysSinceLastOrder > typicalCycle * t.changedCycleMultiplier)
         flags.push("changed-cycle");
     }
   }

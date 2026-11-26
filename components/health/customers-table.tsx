@@ -3,13 +3,13 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Avatar, Card, HealthBadge, Trend, cx } from "@/components/ui";
-import type { Area, HealthStatus } from "@/lib/types";
+import type { HealthStatus } from "@/lib/types";
 
 export interface TableRow {
   id: string;
   name: string;
   type: string;
-  area: Area;
+  area: string | null;
   status: HealthStatus;
   cycleDays: number;
   daysSinceLastOrder: number | null;
@@ -26,7 +26,6 @@ const STATUS_FILTERS: { value: HealthStatus | "all"; label: string }[] = [
   { value: "service-issue", label: "Service issue" },
   { value: "learning", label: "Learning" },
 ];
-const AREA_FILTERS: (Area | "all")[] = ["all", "Westlands", "Kilimani", "Karen"];
 
 function Chip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
@@ -46,12 +45,31 @@ function Chip({ active, onClick, children }: { active: boolean; onClick: () => v
 
 export function CustomersTable({ rows }: { rows: TableRow[] }) {
   const [status, setStatus] = useState<HealthStatus | "all">("all");
-  const [area, setArea] = useState<Area | "all">("all");
+  const [type, setType] = useState<string | "all">("all");
+  const [owner, setOwner] = useState<string | "all">("all");
+  const [search, setSearch] = useState("");
 
-  const visible = useMemo(
-    () => rows.filter((r) => (status === "all" || r.status === status) && (area === "all" || r.area === area)),
-    [rows, status, area],
+  // Filter option lists are derived from the rows at runtime — distinct,
+  // sorted, de-duplicated — so they always match the real data.
+  const types = useMemo(
+    () => Array.from(new Set(rows.map((r) => r.type).filter(Boolean))).sort((a, b) => a.localeCompare(b)),
+    [rows],
   );
+  const owners = useMemo(
+    () => Array.from(new Set(rows.map((r) => r.ownerName).filter(Boolean))).sort((a, b) => a.localeCompare(b)),
+    [rows],
+  );
+
+  const visible = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return rows.filter(
+      (r) =>
+        (status === "all" || r.status === status) &&
+        (type === "all" || r.type === type) &&
+        (owner === "all" || r.ownerName === owner) &&
+        (q === "" || r.name.toLowerCase().includes(q)),
+    );
+  }, [rows, status, type, owner, search]);
 
   return (
     <div className="space-y-5">
@@ -64,14 +82,46 @@ export function CustomersTable({ rows }: { rows: TableRow[] }) {
             </Chip>
           ))}
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="w-14 text-xs uppercase tracking-wide text-faint">Area</span>
-          {AREA_FILTERS.map((a) => (
-            <Chip key={a} active={area === a} onClick={() => setArea(a)}>
-              {a === "all" ? "All" : a}
+        {types.length > 1 ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="w-14 text-xs uppercase tracking-wide text-faint">Type</span>
+            <Chip active={type === "all"} onClick={() => setType("all")}>
+              All types
             </Chip>
-          ))}
-        </div>
+            {types.map((t) => (
+              <Chip key={t} active={type === t} onClick={() => setType(type === t ? "all" : t)}>
+                {t}
+              </Chip>
+            ))}
+          </div>
+        ) : null}
+        {owners.length > 1 ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="w-14 text-xs uppercase tracking-wide text-faint">Owner</span>
+            <Chip active={owner === "all"} onClick={() => setOwner("all")}>
+              All owners
+            </Chip>
+            {owners.map((o) => (
+              <Chip key={o} active={owner === o} onClick={() => setOwner(owner === o ? "all" : o)}>
+                {o}
+              </Chip>
+            ))}
+          </div>
+        ) : null}
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <input
+          type="search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search customers by name…"
+          aria-label="Search customers by name"
+          className="w-full max-w-sm rounded-full border border-line bg-surface px-4 py-2 text-sm text-ink placeholder:text-faint focus:border-wine focus:outline-none"
+        />
+        <span className="text-sm text-muted tabular-nums">
+          {visible.length} customer{visible.length === 1 ? "" : "s"}
+        </span>
       </div>
 
       <Card className="overflow-hidden">
@@ -98,7 +148,7 @@ export function CustomersTable({ rows }: { rows: TableRow[] }) {
                     <div className="min-w-0">
                       <div className="truncate font-medium text-ink">{r.name}</div>
                       <div className="truncate text-sm text-muted">
-                        {r.type} · {r.area}
+                        {r.area ? `${r.type} · ${r.area}` : r.type}
                       </div>
                     </div>
                   </div>
