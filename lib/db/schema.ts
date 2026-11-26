@@ -10,6 +10,8 @@ import {
   doublePrecision,
   boolean,
   timestamp,
+  jsonb,
+  primaryKey,
 } from "drizzle-orm/pg-core";
 
 export const roleEnum = pgEnum("role", ["manager", "rep"]);
@@ -105,6 +107,40 @@ export const thresholds = pgTable("thresholds", {
   reducedDropPct: doublePrecision("reduced_drop_pct").notNull(),
   minOrdersToAssess: integer("min_orders_to_assess").notNull(),
 });
+
+// ---------------------------------------------------------------------------
+// Live QuickBooks sync (the on-site agent POSTs here; see app/api/sync/*).
+// A session is opened at /start, batches are STAGED (never applied) at /batch,
+// and only /commit applies them atomically. If commit never arrives, the staged
+// session is discarded and the previous good data keeps showing.
+// ---------------------------------------------------------------------------
+
+/** One sync session opened by the on-site agent. */
+export const syncSessions = pgTable("sync_sessions", {
+  id: text("id").primaryKey(), // the syncId
+  syncType: text("sync_type").notNull(), // "full" | "incremental"
+  since: timestamp("since", { withTimezone: true }),
+  status: text("status").notNull().default("open"), // open | committed | discarded
+  startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+  finishedAt: timestamp("finished_at", { withTimezone: true }),
+  counts: jsonb("counts"),
+});
+
+/** A staged batch page, keyed by (syncId, entity, seq) so a resend overwrites
+ *  rather than duplicates. Records are stored raw until commit. */
+export const syncBatches = pgTable(
+  "sync_batches",
+  {
+    syncId: text("sync_id").notNull(),
+    entity: text("entity").notNull(), // customers | items | transactions | deletions
+    seq: integer("seq").notNull(),
+    records: jsonb("records").notNull(),
+    receivedAt: timestamp("received_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.syncId, table.entity, table.seq] }),
+  }),
+);
 
 /** One row per data refresh — drives the "last updated" freshness stamp. */
 export const importRuns = pgTable("import_runs", {
