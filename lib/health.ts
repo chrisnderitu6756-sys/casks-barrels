@@ -38,8 +38,11 @@ export function computeAccountHealth(
   const t = options.thresholds ?? DEFAULT_THRESHOLDS;
   const today = options.today ?? new Date();
 
+  // Credit notes are returns, not purchases — excluding them keeps the buying
+  // signal (cadence, last order, uptake) from going negative/absurd. They stay
+  // in the data for net-sales views elsewhere.
   const accountOrders = orders
-    .filter((o) => o.accountId === account.id)
+    .filter((o) => o.accountId === account.id && o.docType !== "credit-note")
     .sort((a, b) => (a.date < b.date ? -1 : 1));
 
   const orderCount = accountOrders.length;
