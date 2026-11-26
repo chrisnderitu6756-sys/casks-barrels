@@ -22,9 +22,10 @@ const DOC: Record<string, "invoice" | "sales-receipt" | "credit-note"> = {
   "credit-memo": "credit-note",
 };
 
-// Item types that are real products (the rest — Discount, Subtotal, Payment,
-// SalesTax, OtherCharge, FixedAsset — are not part of the product catalogue).
-const PRODUCT_TYPES = new Set(["Inventory", "NonInventory", "Service", "InventoryAssembly", "Group"]);
+// Item types that are real products. Everything else QuickBooks returns —
+// Discount, Subtotal, SalesTax, Payment, Group, OtherCharge, FixedAsset — is not
+// part of the product catalogue and must not pollute product insights.
+const PRODUCT_TYPES = new Set(["Inventory", "NonInventory", "Service", "InventoryAssembly"]);
 
 const str = (v: unknown): string => (v == null ? "" : String(v));
 const norm = (v: string) => v.trim().toLowerCase();
@@ -69,20 +70,27 @@ export async function applyStagedSync(
   const result: ApplyResult = { customers: 0, items: 0, transactions: 0, lines: 0, deletions: 0 };
 
   await db.transaction(async (tx) => {
-    // 1) Reps — map each QuickBooks Sales Rep NAME to a rep id: reuse an existing
-    //    rep with the same name (so logins line up), else create a name-slug rep.
+    // 1) Reps — map each QuickBooks Sales Rep value to a rep id. QB usually emits
+    //    the rep INITIALS (e.g. "EM"), sometimes the full name — match on EITHER
+    //    the rep id (initials/code) or the rep name, so synced accounts land under
+    //    the right login. Create a rep only when neither matches.
     const existingReps = await tx.select({ id: s.reps.id, name: s.reps.name }).from(s.reps);
-    const repByName = new Map(existingReps.map((r) => [norm(r.name), r.id]));
+    const repByKey = new Map<string, string>();
+    for (const r of existingReps) {
+      repByKey.set(norm(r.id), r.id);
+      if (!repByKey.has(norm(r.name))) repByKey.set(norm(r.name), r.id);
+    }
     const repIdFor = new Map<string, string>();
     const newReps: { id: string; name: string; email: null; passwordHash: null; role: "rep" }[] = [];
     for (const sr of new Set(customers.map((c) => str(c.salesRep)).filter(Boolean))) {
-      const hit = repByName.get(norm(sr));
+      const hit = repByKey.get(norm(sr));
       if (hit) {
         repIdFor.set(sr, hit);
       } else {
         const id = slug(sr) || `rep-${Math.random().toString(36).slice(2, 8)}`;
         repIdFor.set(sr, id);
-        repByName.set(norm(sr), id);
+        repByKey.set(norm(sr), id);
+        repByKey.set(norm(id), id);
         newReps.push({ id, name: sr, email: null, passwordHash: null, role: "rep" });
       }
     }
@@ -194,17 +202,37 @@ export async function applyStagedSync(
     result.transactions = orderRows.length;
 
     // Lines: replace every applied order's lines (a txn edit can change them).
+    // Only keep lines that reference a TRACKED PRODUCT — transaction lines can
+    // point at non-product items (delivery, discount, VAT, subtotal); those are
+    // skipped so product insights and uptake stay clean.
     const txnIds = orderRows.map((o) => o.id);
     await chunk(txnIds, 500, (c) => tx.delete(s.orderLines).where(inArray(s.orderLines.orderId, c)));
+
+    // Valid product ids = products upserted this run, plus any already in the DB
+    // that these lines reference (incremental runs may not resend every item).
+    const productIds = new Set(productRows.map((p) => p.id));
+    const lineItemIds = [
+      ...new Set(
+        txns.flatMap((t) =>
+          (Array.isArray(t.lines) ? (t.lines as Rec[]) : []).map((l) => str(l.itemListId)).filter(Boolean),
+        ),
+      ),
+    ].filter((id) => !productIds.has(id));
+    await chunk(lineItemIds, 500, async (c) => {
+      const have = await tx.select({ id: s.products.id }).from(s.products).where(inArray(s.products.id, c));
+      for (const r of have) productIds.add(r.id);
+    });
+
     const lineRows = txns.flatMap((t) => {
       const oid = str(t.txnId);
       const lines = Array.isArray(t.lines) ? (t.lines as Rec[]) : [];
       return lines
-        .filter((l) => l.itemListId || l.itemFullName)
-        .map((l, i) => ({
+        .map((l, i) => ({ l, i }))
+        .filter(({ l }) => productIds.has(str(l.itemListId)))
+        .map(({ l, i }) => ({
           id: `${oid}-${str(l.txnLineId) || i + 1}`,
           orderId: oid,
-          productId: str(l.itemListId) || slug(str(l.itemFullName)),
+          productId: str(l.itemListId),
           quantity: Math.round(num(l.quantity)),
           netAmount: Math.round(num(l.amountNet) * 100) / 100,
         }));
