@@ -1,0 +1,50 @@
+@import "tailwindcss";
+
+/* ------------------------------------------------------------------ */
+/* Casks & Barrels — Account Intelligence design tokens                */
+/* Warm, advisory palette lifted from the Phase-1 demo.                */
+/* ------------------------------------------------------------------ */
+@theme {
+  --color-canvas: #f7f4ef;
+  --color-surface: #ffffff;
+  --color-surface-2: #fbf9f5;
+  --color-ink: #2a2420;
+  --color-muted: #6f655a;
+  --color-faint: #9a8f82;
+  --color-line: #e8e2d8;
+
+  --color-sidebar: #392e37;
+  --color-sidebar-ink: #efe7e0;
+  --color-sidebar-muted: #b7a9b1;
+  --color-sidebar-active: #4a3b48;
+
+  --color-wine: #7b2d3a;
+  --color-wine-soft: #f3e4e1;
+  --color-gold: #a9803a;
+  --color-gold-soft: #f3ead6;
+
+  /* Health states */
+  --color-healthy: #3f7d5a;
+  --color-risk: #c0552f;
+  --color-service: #a9803a;
+  --color-learning: #7c8aa0;
+
+  --font-display: var(--font-display-serif);
+}
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Thin, warm scrollbars to match the surface */
+* {
+  scrollbar-color: var(--color-line) transparent;
+}
